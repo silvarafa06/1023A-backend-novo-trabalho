@@ -175,6 +175,34 @@ async listar(req: RequestAuth, res: Response) {
   res.status(200).json({ itens: itensComProduto });
 }
 
+  // Método administrativo: listar todos os carrinhos (com itens populados)
+  async listarTodos(req: Request, res: Response) {
+    const carrinhos = await db.collection<Carrinho>("carrinhos").find().toArray();
+
+    // Para cada carrinho, popular os produtos dos itens
+    const resultado = await Promise.all(carrinhos.map(async (c) => {
+      const itensPopulados = await Promise.all(c.itens.map(async (item) => {
+        const produto = await db.collection("produtos").findOne({ _id: new ObjectId(item.produtoId) });
+        return { produto: produto || null, quantidade: item.quantidade, produtoId: item.produtoId };
+      }));
+      return { usuarioId: c.usuarioId, itens: itensPopulados, total: c.total, dataAtualizacao: c.dataAtualizacao };
+    }));
+
+    res.status(200).json(resultado);
+  }
+
+  // Método administrativo: excluir o carrinho de um usuário pelo usuarioId
+  async excluirPorUsuarioId(req: Request, res: Response) {
+    const { usuarioId } = req.params;
+    if (!usuarioId) return res.status(400).json({ mensagem: "usuarioId não informado" });
+
+    const carrinho = await db.collection<Carrinho>("carrinhos").findOne({ usuarioId });
+    if (!carrinho) return res.status(404).json({ mensagem: "Carrinho não encontrado" });
+
+    await db.collection<Carrinho>("carrinhos").deleteOne({ usuarioId });
+    res.status(200).json({ mensagem: "Carrinho do usuário removido com sucesso" });
+  }
+
 
 
   async remover(req: Request, res: Response) {

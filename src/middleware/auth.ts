@@ -4,6 +4,7 @@ import {Request, Response, NextFunction} from 'express'
 
 interface RequestAuth extends Request{
     usuarioId?:string
+    tipo?: string
 }
 
 function Auth(req:RequestAuth,res:Response,next:NextFunction){
@@ -28,8 +29,10 @@ function Auth(req:RequestAuth,res:Response,next:NextFunction){
                 detalhes: "Houve um problema com suas credenciais. Por favor, faça login novamente"
             })
 
-        req.usuarioId = decoded.usuarioId;
-        next()
+    const payload = decoded as any;
+    req.usuarioId = payload.usuarioId;
+    req.tipo = String(payload.tipo || 'user').toLowerCase();
+    next()
 
     })
 }
